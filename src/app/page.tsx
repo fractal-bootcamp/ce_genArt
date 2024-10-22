@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+// import DiffusionSimulation from "./diffusionSim";
 
 const CanvasComponent = dynamic(
   () => import("./canvas").then((mod) => mod.CanvasComponent),
