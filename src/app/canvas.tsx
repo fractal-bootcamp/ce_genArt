@@ -18,6 +18,7 @@ interface RotateSceneProps {
   scale?: number;
   rowIndex: number;
   colIndex: number;
+  depthIndex: number;
 }
 
 // defines what 3d objects are in the scene
@@ -26,6 +27,7 @@ function RotateScene({
   scale = 1,
   rowIndex,
   colIndex,
+  depthIndex,
 }: RotateSceneProps) {
   // current -> accesses the mesh instance
   const meshRotate = useRef<Mesh>(null); // creates a reference to the 3d mesh
@@ -51,6 +53,7 @@ function RotateScene({
         rowIndex
       );
       materialRef.current.uniforms.totalCubes.value = new THREE.Vector2(50, 50);
+      materialRef.current.uniforms.depthIndex.value = depthIndex;
     }
   });
 
@@ -100,26 +103,29 @@ export function CanvasComponent() {
           <noiseShaderMaterial />
         </mesh>
 
-        {/** grid array */}
-        {Array.from({ length: 50 }).map((_, rowIndex) => {
-          // Calculate scale based on row (smaller as we go up)
-          const scale = 1 - rowIndex * 0.05; // Will go from 1 to 0.05
-          // each row
-          return Array.from({ length: 50 }).map((_, colIndex) => (
-            <RotateScene
-              key={`${rowIndex}-${colIndex}`}
-              // Position cubes with 4 units spacing, centered at 0
-              position={[
-                (colIndex - 25) * 2, // X position (horizontal)
-                (rowIndex - 25) * 2, // Y position (vertical)
-                0, // Z position (depth)
-              ]}
-              scale={scale} // Pass scale as prop
-              rowIndex={rowIndex}
-              colIndex={colIndex}
-            />
-          ));
-        })}
+        {/* // 3d grid array  */}
+        {Array.from({ length: 3 }).map((_, depthIndex) =>
+          Array.from({ length: 50 }).map((_, rowIndex) => {
+            // Calculate scale based on row (smaller as we go up)
+            const scale = 1 - rowIndex * 0.05; // Will go from 1 to 0.05
+            // each row
+            return Array.from({ length: 50 }).map((_, colIndex) => (
+              <RotateScene
+                key={`${depthIndex}-${rowIndex}-${colIndex}`}
+                // Position cubes with 4 units spacing, centered at 0
+                position={[
+                  (colIndex - 25) * 2, // X position (horizontal)
+                  (rowIndex - 25) * 2, // Y position (vertical)
+                  (depthIndex - 1) * 10, // Z position (depth)
+                ]}
+                scale={scale} // Pass scale as prop
+                rowIndex={rowIndex}
+                colIndex={colIndex}
+                depthIndex={depthIndex}
+              />
+            ));
+          })
+        )}
 
         {/** add orbit controls for camera manipulation */}
         <OrbitControls
