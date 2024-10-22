@@ -15,7 +15,6 @@ model User {
     createdAt DateTime  @default(now())
     email     String    @unique
     name      String?
-    role      Role      @default(USER)
     Artwork   Artwork[]
     Like      Likes[]
     profile   Profile?
