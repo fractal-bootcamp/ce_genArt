@@ -1,0 +1,21 @@
+{
+  "name": "backendnew",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@prisma/client": "^5.21.1",
+    "@types/bun": "latest",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "prisma": "^5.21.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@clerk/clerk-sdk-node": "^5.0.52"
+  }
+}

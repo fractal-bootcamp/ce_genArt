@@ -11,23 +11,51 @@ generator client {
 
 // "application model" - describes User in app 
 model User {
-    id        Int      @id @default(autoincrement())
-    createdAt DateTime @default(now())
-    email     String   @unique
+    id        String    @id @default(cuid())
+    createdAt DateTime  @default(now())
+    email     String    @unique
     name      String?
-    role      Role     @default(USER)
-    posts     Post[]
+    role      Role      @default(USER)
+    Artwork   Artwork[]
+    Like      Likes[]
+    profile   Profile?
+}
+
+model Profile {
+    id     String  @id @default(cuid())
+    bio    String?
+    user   User    @relation(fields: [userId], references: [id])
+    userId String  @unique
 }
 
 // describes Post from User 
-model Post {
-    id        Int      @id @default(autoincrement())
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    published Boolean  @default(false)
-    title     String   @db.VarChar(255)
-    author    User?    @relation(fields: [authorId], references: [id])
-    authorId  Int?
+model Artwork {
+    id            String   @id @default(cuid())
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+    published     Boolean  @default(false)
+    title         String   @db.VarChar(255)
+    author        User     @relation(fields: [authorId], references: [id])
+    authorId      String
+    Like          Likes[]
+    configuration Json
+    viewCount     Int      @default(0)
+
+    // with this index under Artwork - db can jump directly to all artworks by author 
+    @@index([authorId]) // find all artworks by author 'X'
+}
+
+model Likes {
+    id        String  @id @default(cuid())
+    artworkId String
+    Artwork   Artwork @relation(fields: [artworkId], references: [id])
+    userId    String
+    User      User    @relation(fields: [userId], references: [id])
+
+    // database constraints 
+    @@unique([artworkId, userId]) // compoound unique constraint - ensures use can only like artwork once - 
+    @@index([userId]) // index on the userId field - "show me all the artworks this user liked"
+    @@index([artworkId]) // index on artworkId field - "show me how many likes this artwork has"
 }
 
 enum Role {
