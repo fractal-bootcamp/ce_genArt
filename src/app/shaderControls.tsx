@@ -5,7 +5,7 @@ import { useState } from "react";
 import { MutableRefObject } from "react";
 import { Vector3 } from "three";
 import dynamic from "next/dynamic";
-import { NoiseShaderMaterial, NoiseShaderMaterialType } from "./material";
+import { NoiseShaderMaterialType } from "./material";
 
 interface ShaderControlsProps {
   materialRef: MutableRefObject<NoiseShaderMaterialType | null>;

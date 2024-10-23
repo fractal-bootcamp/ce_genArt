@@ -48,6 +48,12 @@ function RotateScene({
 
   // animation frame loop
   useFrame((state) => {
+    if (meshRotate.current) {
+      meshRotate.current.rotation.y += 0.01;
+      if (clicked) {
+        meshRotate.current.rotation.y += 0.05;
+      }
+    }
     if (materialRef.current && materialRef.current.uniforms) {
       materialRef.current.uniforms.time.value = state.clock.elapsedTime;
       materialRef.current.uniforms.positionIndex.value.set(colIndex, rowIndex);
@@ -61,9 +67,19 @@ function RotateScene({
     <mesh
       ref={meshRotate}
       position={position}
-      onClick={() => setClicked(!clicked)}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
+      onClick={(event) => {
+        event.stopPropagation(); // Prevent event bubbling
+        setClicked(!clicked);
+        console.log("Cube clicked!"); // Add this to debug
+      }}
+      onPointerOver={(event) => {
+        event.stopPropagation();
+        setHovered(true);
+      }}
+      onPointerOut={(event) => {
+        event.stopPropagation();
+        setHovered(false);
+      }}
       scale={hovered ? scale * 1.3 : scale}
       castShadow
       receiveShadow
@@ -73,7 +89,7 @@ function RotateScene({
         ref={materialRef}
         transparent
         depthWrite={true}
-        key={`material-${rowIndex}-${colIndex}-${depthIndex}`}
+        attach="material"
       />
     </mesh>
   );

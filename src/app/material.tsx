@@ -9,7 +9,7 @@ import { shaderMaterial } from "@react-three/drei";
 import * as THREE from "three";
 
 // Create the material
-const NoiseShaderMaterial = shaderMaterial(
+export const NoiseShaderMaterial = shaderMaterial(
   // Uniforms
   {
     time: 0,
@@ -113,9 +113,6 @@ const NoiseShaderMaterial = shaderMaterial(
   `
 );
 
-// Extend Three.js materials
-extend({ NoiseShaderMaterial });
-
 // Create the type for our material
 export type NoiseShaderMaterialType = THREE.ShaderMaterial & {
   uniforms: {
@@ -132,6 +129,9 @@ export type NoiseShaderMaterialType = THREE.ShaderMaterial & {
   };
 };
 
+// Extend Three.js materials
+extend({ NoiseShaderMaterial });
+
 declare global {
   namespace JSX {
     interface IntrinsicElements {
@@ -142,5 +142,3 @@ declare global {
     }
   }
 }
-
-export { NoiseShaderMaterial };
