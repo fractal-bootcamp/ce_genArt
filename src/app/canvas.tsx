@@ -1,18 +1,22 @@
 // render client side only
 "use client";
 
+// import dependencies
+import dynamic from "next/dynamic";
 import * as THREE from "three";
-
-// import necessary components and hooks
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useRef, useState, MutableRefObject } from "react";
 import { useFrame, Canvas, useLoader } from "@react-three/fiber";
 import { OrbitControls, PerspectiveCamera } from "@react-three/drei";
 import { Mesh, TextureLoader, ShaderMaterial } from "three";
 
-// custom material
-import "./material"; // Important: This needs to be imported first
+// import custom shader material
+import { NoiseShaderMaterial } from "./material";
 
-// define prop types for RotateScene
+const ShaderControls = dynamic(() => import("./shaderControls"), {
+  ssr: false,
+});
+
+// define types for rotating scene
 interface RotateSceneProps {
   position: [number, number, number];
   scale?: number;
@@ -21,7 +25,7 @@ interface RotateSceneProps {
   depthIndex: number;
 }
 
-// defines what 3d objects are in the scene
+// rotating scene component - defines 3D objects
 function RotateScene({
   position,
   scale = 1,
@@ -29,23 +33,24 @@ function RotateScene({
   colIndex,
   depthIndex,
 }: RotateSceneProps) {
-  // current -> accesses the mesh instance
-  const meshRotate = useRef<Mesh>(null); // creates a reference to the 3d mesh
-  const materialRef = useRef<ShaderMaterial>(null);
-
-  // state for interactive features
+  // refs to access mesh and material instances
+  const meshRotate = useRef<Mesh>(null);
+  const materialRef = useRef<typeof NoiseShaderMaterial>(null);
+  // state for hover and click interactions
   const [hovered, setHovered] = useState(false);
   const [clicked, setClicked] = useState(false);
 
-  // animation loop - every frame rotates the box by .01 radians
+  // animation frame loop
   useFrame((state) => {
+    // update mesh rotation
     if (meshRotate.current) {
       meshRotate.current.rotation.y += 0.01;
-      // rotate faster when clicked
       if (clicked) {
         meshRotate.current.rotation.y += 0.05;
       }
     }
+
+    // update shader uniforms
     if (materialRef.current) {
       materialRef.current.uniforms.time.value = state.clock.elapsedTime;
       materialRef.current.uniforms.positionIndex.value = new THREE.Vector2(
@@ -58,67 +63,58 @@ function RotateScene({
   });
 
   return (
-    // create 3d mesh & attaches reference to it
     <mesh
       ref={meshRotate}
       position={position}
-      // add interaction handlers
       onClick={() => setClicked(!clicked)}
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}
-      scale={hovered ? scale * 1.5 : scale} // scale up when hovered
+      scale={hovered ? scale * 1.3 : scale}
       castShadow
       receiveShadow
     >
-      {/** add a box geometry to the mesh dimension 2-2-2 */}
       <boxGeometry args={[2, 2, 2]} />
-      {/** apply material with interactive colors */}
-      <noiseShaderMaterial ref={materialRef} />
+      <noiseShaderMaterial ref={materialRef} transparent depthWrite={true} />
     </mesh>
   );
 }
 
-// define main canvas component
+// main canvas component
 export function CanvasComponent() {
+  const materialRef = useRef<ShaderMaterial>(null);
+
   return (
-    // create a container div for the canvas
     <div style={{ width: "100%", height: "100vw" }}>
-      {/** R3F canvas component which sets Three.js scene */}
       <Canvas shadows gl={{ antialias: true }}>
+        {/* Camera setup */}
         <PerspectiveCamera makeDefault position={[0, 20, 100]} fov={60} />
-        {/** add ambient light to scene for general illumination */}
+
+        {/* Lighting */}
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 6]} color="red" />
 
-        {/* // ground plane for shadows  */}
+        {/* Ground plane */}
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
           position={[0, -20, 0]}
           receiveShadow
         >
-          {/* // grid  */}
-          {/* <planeGeometry args={[300, 300]} /> */}
-          {/* <meshStandardMaterial color="#666666" /> */}
-
-          <noiseShaderMaterial />
+          <noiseShaderMaterial transparent depthWrite={true} />
         </mesh>
 
-        {/* // 3d grid array  */}
+        {/* 3D grid of cubes */}
         {Array.from({ length: 3 }).map((_, depthIndex) =>
           Array.from({ length: 50 }).map((_, rowIndex) => {
-            // Calculate scale based on row (smaller as we go up)
-            const scale = 1 - rowIndex * 0.05; // Will go from 1 to 0.05
-            // each row
+            const scale = 1 - rowIndex * 0.05;
             return Array.from({ length: 50 }).map((_, colIndex) => (
               <RotateScene
                 key={`${depthIndex}-${rowIndex}-${colIndex}`}
-                // Position cubes with 4 units spacing, centered at 0
                 position={[
-                  (colIndex - 25) * 2, // X position (horizontal)
-                  (rowIndex - 25) * 2, // Y position (vertical)
+                  (colIndex - 25) * 2, // X position
+                  (rowIndex - 25) * 2, // Y position
                   (depthIndex - 1) * 10, // Z position (depth)
                 ]}
-                scale={scale} // Pass scale as prop
+                scale={scale}
                 rowIndex={rowIndex}
                 colIndex={colIndex}
                 depthIndex={depthIndex}
@@ -127,7 +123,9 @@ export function CanvasComponent() {
           })
         )}
 
-        {/** add orbit controls for camera manipulation */}
+        {/* Shader controls UI */}
+
+        {/* Camera controls */}
         <OrbitControls
           enablePan={false}
           minDistance={10}
@@ -136,8 +134,11 @@ export function CanvasComponent() {
           maxPolarAngle={Math.PI / 1.5}
           target={[0, 0, 0]}
         />
+
+        {/* Scene fog */}
         <fog attach="fog" args={["#000000", 40, 200]} />
       </Canvas>
+      <ShaderControls materialRef={materialRef} />
     </div>
   );
 }

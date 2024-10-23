@@ -1,138 +1,138 @@
-// materials.tsx
+// Declare this file as client-side code
 "use client";
 
-// Import necessary dependencies
-import { extend } from "@react-three/fiber";
-import { shaderMaterial } from "@react-three/drei";
-import * as THREE from "three";
+import { extend } from "@react-three/fiber"; // Allows us to use custom materials in R3F
+import type { ReactThreeFiber } from "@react-three/fiber";
+import { shaderMaterial } from "@react-three/drei"; // Helper to create shader materials
+import * as THREE from "three"; // Main Three.js library
 
-// Create a shader material for noise effect
-// shaderMaterial takes three arguments: uniforms, vertex shader, and fragment shader
+// Create a custom shader material with three parts: uniforms, vertex shader, and fragment shader
 const NoiseShaderMaterial = shaderMaterial(
-  // 1. Uniforms: values passed from JS to shader
+  // 1. Uniforms: Variables that can be updated from JavaScript
   {
-    time: 0, // animating time for moving noise
-    color: new THREE.Color(0.0, 0.0, 0.0), // base colors (RGB)
-    positionIndex: new THREE.Vector2(0, 0), // current cube's grid position
-    totalCubes: new THREE.Vector2(50, 50), // grid dimensions
-    depthIndex: 0, // z-layer index
+    time: 0, // For animations
+    color: new THREE.Color(0.0, 0.0, 0.0), // Base color (RGB)
+    positionIndex: new THREE.Vector2(0, 0), // Current cube's position in grid
+    totalCubes: new THREE.Vector2(50, 50), // Grid dimensions
+    depthIndex: 0, // Z-layer index
+    speed: 0.5, // Animation speed control
+    intensity: 0.3, // Lighting intensity control
   },
 
-  // 2. Vertex Shader: processes geo
+  // 2. Vertex Shader: Processes each vertex of the geometry
+  /* glsl */ `
+    // Declare varying variables to pass data to fragment shader
+    varying vec2 vUv;            // UV coordinates for texturing
+    varying vec3 vNormal;        // Surface normals for lighting
+    varying vec3 vViewPosition;  // Camera-relative position
+    varying vec3 vWorldPosition; // World-space position
+    
+    void main() {
+      // Pass UV coordinates to fragment shader
+      vUv = uv;
+      
+      // Calculate and normalize surface normal
+      vNormal = normalize(normalMatrix * normal);
+      
+      // Calculate world position for lighting
+      vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+      vWorldPosition = worldPosition.xyz;
+      
+      // Calculate view-space position
+      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      vViewPosition = -mvPosition.xyz;
+      
+      // Set final vertex position
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `,
 
-  `
-  varying vec2 vUv;                             // UV coords for textures& 2d effects 
-  varying vec3 vNormal;                         // surface norms for lighting calculations
-  varying vec3 vViewPosition;                   // cam-relative position - view-dependent effects 
-  varying vec3 vWorldPosition;                  // world space position 
-  
-  void main() {
-    vUv = uv;                                   // pass UV coords 
-    vNormal = normalize(normalMatrix * normal); // calculate normals 
-    vec4 worldPosition = modelMatrix * vec4(position, 1.0);     // calc world position for lights 
-    vWorldPosition = worldPosition.xyz;
-    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);    // calc view space position 
-    vViewPosition = -mvPosition.xyz;
-    gl_Position = projectionMatrix * mvPosition;                // set final vertex position 
-  }
-`,
+  // 3. Fragment Shader: Colors each pixel
+  /* glsl */ `
+    // Declare uniforms that we'll update from JavaScript
+    uniform float time;          // Animation time
+    uniform float speed;         // Animation speed control
+    uniform float intensity;     // Lighting intensity
+    uniform vec3 color;          // Base color
+    uniform vec2 positionIndex;  // Grid position
+    uniform vec2 totalCubes;     // Grid size
+    uniform float depthIndex;    // Depth layer
 
-  // 3. Fragment Shader: Handles the color/pixel data
-  // This creates our noise pattern and gradient effect
-  `
-    uniform float time;
-    uniform vec2 positionIndex;
-    uniform vec2 totalCubes;  // Make sure uniform is declared
-    uniform float depthIndex;
-
+    // Receive varying variables from vertex shader
     varying vec2 vUv;
     varying vec3 vNormal;
     varying vec3 vViewPosition;
     varying vec3 vWorldPosition;
 
-    float noise(vec2 p) {                                        // creates random noise 
+    // Pseudo-random noise function
+    float noise(vec2 p) {
       return fract(sin(dot(p.xy, vec2(12.9898,78.233))) * 43758.5453123);
     }
 
-    
-    vec3 getBaseColor(vec2 position, float depth) {             // generate color based off position & depth 
-    vec2 normalizedPos = position / totalCubes;                 // convert grid to 0-1 range 
-
-// define the colors for each depth layer 
-    vec3 colors[3] = vec3[3](
-        vec3(0.0, 0.5, 0.3),  // layer 1
-        vec3(0.4, 0.0, 0.8),  // layer 2 (fixed 0.0. to 0.0)
-        vec3(0.8, 0.0, 0.0)   // layer 3
-      );
-
-// get the base color for the current depth 
-      vec3 baseColor1 = colors[int(depth)];
-    // lighter variations 
-      vec3 baseColor2 = baseColor1 + vec3(0.2, 0.2, 0.2);
-      vec3 baseColor3 = baseColor2 + vec3(0.2, 0.2, 0.2);
-      
-// create the gradients 
-      vec3 horizontalGradient = mix(baseColor1, baseColor2, normalizedPos.x);
-      vec3 verticalGradient = mix(baseColor2, baseColor3, normalizedPos.y);
-
-      return mix(horizontalGradient, verticalGradient, 0.5);
-    }
-
-
-
     void main() {
-
-    
-// 1- basic setup: prepare normal and view vectors for lighting 
+      // Normalize vectors for lighting calculations
       vec3 normal = normalize(vNormal);
       vec3 viewDir = normalize(vViewPosition);
       
-// 2- COLOR GEN!!__________________________________________________________________
-// add noise to base color 
-      vec3 baseColor = getBaseColor(positionIndex, depthIndex);
-      float n = noise(vUv * 10.0 + time);                       // animate noise 
-      vec3 lighterColor = baseColor + vec3(0.2);
-      vec3 color = mix(baseColor, lighterColor, n);
+      // Create animated UV coordinates
+      vec2 uv = vUv;
+      uv.x += sin(time * speed) * 0.5;
+      uv.y += cos(time * speed) * 0.5;
 
-// 3- light position: calculate lights 
-      // Moving light
-    vec3 lightPosition = vec3(sin(time) * 90.0,  // Circular motion
-         200.0, cos(time) * 20.0);
-    vec3 lightDir = normalize(lightPosition - vWorldPosition);
+      // Define colors for each depth layer
+      vec3 colors[3] = vec3[3](
+        vec3(0.8, 0.0, 0.0),    // Red for first layer
+        vec3(0.0, 0.8, 0.0),    // Green for second layer
+        vec3(0.0, 0.0, 0.8)     // Blue for third layer
+      );
+
+      // Define secondary colors for gradient
+      vec3 colors2[3] = vec3[3](
+        vec3(1.0, 0.5, 0.0),    // Orange
+        vec3(0.0, 1.0, 0.5),    // Lime
+        vec3(0.5, 0.0, 1.0)     // Purple
+      );
+
+      // Select colors based on depth layer
+      vec3 color1 = colors[int(depthIndex)];
+      vec3 color2 = colors2[int(depthIndex)];
+      vec3 color = mix(color1, color2, uv.x);
+
+      // Calculate lighting
+      vec3 lightPosition = vec3(90.0, 10.0, 20.0);
+      vec3 lightDir = normalize(lightPosition - vWorldPosition);
       
-// 4- diffuse lighting: how light affects surface 
-      float diff = max(dot(normal, lightDir), 0.3);
+      // Calculate diffuse lighting
+      float diff = max(dot(normal, lightDir), 0.0);
       vec3 diffuse = color * diff;
       
-// 5- address ambient lighting 
-      vec3 ambient = color * 0.3;
+      // Calculate ambient lighting using intensity uniform
+      vec3 ambient = color * intensity;
       
-// 6- specular highlights and refelctions 
+      // Calculate specular highlights
       vec3 reflectDir = reflect(-lightDir, normal);
       float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
       vec3 specular = vec3(0.5) * spec;
-    
-// 7 - composition: combine all lighting components 
-      vec3 finalColor = ambient + diffuse + specular;   
-// output final color with alpha=1.0 
+      
+      // Combine all lighting components
+      vec3 finalColor = ambient + diffuse + specular;
+      
+      // Output final color with full opacity
       gl_FragColor = vec4(finalColor, 1.0);
     }
   `
 );
 
-// make material avaibale in React Three Fiber
+// Extend directly with NoiseShaderMaterial
 extend({ NoiseShaderMaterial });
 
-// Add TypeScript support for the custom material in JSX
+// TypeScript support
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      noiseShaderMaterial: any;
+      noiseShaderMaterial: any; // Simplified type for now
     }
   }
 }
-
-// Export for use in other components
-export type NoiseShaderMaterialImpl = typeof NoiseShaderMaterial;
 
 export { NoiseShaderMaterial };
